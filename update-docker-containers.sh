@@ -41,6 +41,7 @@ get_project_name() {
 
 echo "=============================================="
 echo "Docker Compose and Standalone Containers Update Script Started"
+echo "$(date)"
 echo "=============================================="
 echo "Base Path: $BASE_PATH"
 echo ""
@@ -437,4 +438,5 @@ fi
 echo "Docker cleanup completed."
 echo ""
 echo "Script execution completed."
+echo "$(date)"
 echo "=============================================="
