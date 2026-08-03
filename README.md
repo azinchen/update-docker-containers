@@ -17,12 +17,21 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    sudo chmod +x /usr/local/bin/update-docker-containers
    ```
 
-2. **Create a cron task to run the script periodically:**
-
-   Open the crontab file for editing:
+2. **Create the log directory:**
 
    ```sh
-   crontab -e
+   sudo mkdir -p /var/log/docker-update
+   sudo touch /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
+   sudo chown root:root /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
+   sudo chmod 0640 /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
+   ```
+
+3. **Create a cron task to run the script periodically:**
+
+   The script needs root privileges (for Docker access and for writing to the log files created above), so add it to root's crontab:
+
+   ```sh
+   sudo crontab -e
    ```
 
    Add the following line to run the script daily at midnight (adjust the schedule as needed):
@@ -33,7 +42,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
 
    Ensure that `/path/to/base_directory` is replaced with the actual path to your parent directory containing the Docker Compose project subdirectories.
 
-3. **Set up log rotation:**
+4. **Set up log rotation:**
 
    Create a logrotate configuration file for the script:
 
@@ -107,14 +116,7 @@ This structure allows the script to automatically locate and process each Docker
 - Informational logs: `/var/log/docker-update/docker-update.log`
 - Error logs: `/var/log/docker-update/docker-update-error.log`
 
-Ensure the log directory exists and has the correct permissions:
-
-```sh
-sudo mkdir -p /var/log/docker-update
-sudo touch /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
-sudo chown root:root /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
-sudo chmod 0640 /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
-```
+The log directory and files are set up in step 2 of the Installation section.
 
 ## License
 
