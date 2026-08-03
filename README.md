@@ -22,9 +22,9 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
 
    ```sh
    sudo mkdir -p /var/log/docker-update
-   sudo touch /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
-   sudo chown root:root /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
-   sudo chmod 0640 /var/log/docker-update/docker-update.log /var/log/docker-update/docker-update-error.log
+   sudo touch /var/log/docker-update/docker-update.log
+   sudo chown root:root /var/log/docker-update/docker-update.log
+   sudo chmod 0640 /var/log/docker-update/docker-update.log
    ```
 
 3. **Create a cron task to run the script periodically:**
@@ -38,8 +38,10 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    Add the following line to run the script daily at midnight (adjust the schedule as needed):
 
    ```sh
-   0 0 * * * /usr/local/bin/update-docker-containers /path/to/base_directory >> /var/log/docker-update/docker-update.log 2>> /var/log/docker-update/docker-update-error.log
+   0 0 * * * /usr/local/bin/update-docker-containers /path/to/base_directory >> /var/log/docker-update/docker-update.log 2>&1
    ```
+
+   Both streams go to a single log file: `docker` and `docker compose` write routine progress output (image pulls, container status) to stderr, so splitting the streams would fill a separate "error" log with normal output on every run.
 
    Ensure that `/path/to/base_directory` is replaced with the actual path to your parent directory containing the Docker Compose project subdirectories.
 
@@ -115,10 +117,11 @@ This structure allows the script to automatically locate and process each Docker
 
 ## Logs
 
-- Informational logs: `/var/log/docker-update/docker-update.log`
-- Error logs: `/var/log/docker-update/docker-update-error.log`
+All output (informational messages and errors) goes to a single file:
 
-The log directory and files are set up in step 2 of the Installation section.
+- `/var/log/docker-update/docker-update.log`
+
+The log directory and file are set up in step 2 of the Installation section.
 
 ## License
 
