@@ -4,6 +4,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
 
 ## Requirements
 
+- Linux with GNU coreutils and findutils (the script uses `realpath` and `find -printf`)
 - `bash`
 - `docker` with the Compose plugin (`docker compose`) or the standalone `docker-compose` binary
 - `jq`
@@ -68,13 +69,13 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
 
 ## Usage
 
-Run the script manually:
+Run the script manually (as root, for the same reasons as the cron task):
 
 ```sh
-update-docker-containers /path/to/base_directory
+sudo update-docker-containers /path/to/base_directory
 ```
 
-Replace `/path/to/base_directory` with the path to the parent directory that contains subdirectories, each housing a Compose file (`docker-compose.yml`, `docker-compose.yaml`, `compose.yml`, or `compose.yaml`).
+Replace `/path/to/base_directory` with the path to the parent directory that contains subdirectories, each housing a Compose file (`docker-compose.yml`, `docker-compose.yaml`, `compose.yml`, or `compose.yaml`). Only the base directory itself and one level of subdirectories are scanned; Compose files nested deeper are ignored.
 
 ### Example
 
@@ -91,7 +92,7 @@ Replace `/path/to/base_directory` with the path to the parent directory that con
 You would replace `/path/to/base_directory` with `/home/user/docker_projects` when running the script:
 
 ```sh
-update-docker-containers /home/user/docker_projects
+sudo update-docker-containers /home/user/docker_projects
 ```
 
 Explanation:
@@ -107,9 +108,10 @@ This structure allows the script to automatically locate and process each Docker
 * **Standalone containers**: For each running container not managed by Compose, the script pulls the latest image. If a newer image is available, the container is stopped, removed, and recreated with the new image, preserving its command, environment variables, port bindings, volumes, network mode, restart policy, and extra hosts.
 
   > **Limitation:** other settings — entrypoint overrides, labels, resource limits, capabilities, devices, healthchecks, etc. — are **not** carried over. For standalone containers with complex configurations, consider a dedicated tool such as [Watchtower](https://containrrr.dev/watchtower/) instead.
-* **Cleanup**: After updating, the script runs `docker system prune --all --force`.
+* **Pinned images**: updates are only picked up for mutable tags such as `:latest`, `:stable`, or `:1`, where the registry moves the tag to newer builds. Containers using an immutable version tag (e.g. `nginx:1.25.3`) or a digest (`nginx@sha256:...`) always pull the same image and are never updated — that is by design, not a malfunction.
+* **Cleanup**: After updating, the script runs `docker image prune --all --force`.
 
-  > **Warning:** this removes **all** images not used by at least one container — not just old versions of updated images. Volumes and bind mounts are never touched.
+  > **Warning:** this removes **all** images not used by at least one container — not just old versions of updated images. Containers (including stopped ones), volumes, and networks are never touched.
 
 ## Logs
 
@@ -120,4 +122,4 @@ The log directory and files are set up in step 2 of the Installation section.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

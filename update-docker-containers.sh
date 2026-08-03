@@ -381,9 +381,10 @@ echo "Cleaning up unused Docker images..."
 echo ""
 
 # Remove images not used by any container (old image versions left behind
-# by updates). Volumes are intentionally left untouched.
-if ! docker system prune --all --force; then
-    echo "Failed to perform Docker system prune." >&2
+# by updates). Containers, volumes and networks are intentionally left
+# untouched.
+if ! docker image prune --all --force; then
+    echo "Failed to prune unused Docker images." >&2
     exit 1
 fi
 
