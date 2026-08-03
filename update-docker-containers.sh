@@ -159,15 +159,17 @@ if [ -n "$DOCKER_COMPOSE_COMMAND" ]; then
 
             done
 
-            # Recreate/restart services if needed. 'up --detach' only
-            # recreates containers whose image or configuration changed,
-            # so unchanged services keep running without interruption.
+            # Recreate services if needed. '--force-recreate' rebuilds
+            # every container in the project in dependency order, so
+            # services that inherit another service's network namespace
+            # (network_mode: service:...) are re-attached to the new
+            # container instead of being left on a dead namespace.
             if [ "$compose_project_has_updates" = true ] \
                 || [ "$containers_not_running" = true ]; then
                 echo "Updating services for project '$project_name'..."
                 echo ""
 
-                if ! $DOCKER_COMPOSE_COMMAND up --detach; then
+                if ! $DOCKER_COMPOSE_COMMAND up --detach --force-recreate; then
                     echo "Failed to bring up services for project '$project_name'." >&2
                     continue
                 fi
