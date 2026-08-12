@@ -94,9 +94,10 @@ if [ -n "$DOCKER_COMPOSE_COMMAND" ]; then
             compose_project_has_updates=false
             containers_not_running=false
 
-            # Pull the latest images
+            # Pull the latest images. '--quiet' suppresses the per-layer
+            # progress output; errors still go to stderr.
             echo "Pulling latest images for project '$project_name'..."
-            if ! $DOCKER_COMPOSE_COMMAND pull; then
+            if ! $DOCKER_COMPOSE_COMMAND pull --quiet; then
                 echo "Failed to pull images for project '$project_name'. Skipping." >&2
                 continue
             fi
@@ -169,7 +170,8 @@ if [ -n "$DOCKER_COMPOSE_COMMAND" ]; then
                 echo "Updating services for project '$project_name'..."
                 echo ""
 
-                if ! $DOCKER_COMPOSE_COMMAND up --detach --force-recreate; then
+                if ! $DOCKER_COMPOSE_COMMAND up --detach --force-recreate \
+                    --quiet-pull; then
                     echo "Failed to bring up services for project '$project_name'." >&2
                     continue
                 fi
@@ -239,9 +241,10 @@ else
         echo "Checking standalone container: $container_name"
         echo "Image: $image_name"
 
-        # Pull the latest image
+        # Pull the latest image. '--quiet' suppresses the per-layer
+        # progress output; errors still go to stderr.
         echo "Pulling latest image for '$image_name'..."
-        if ! docker pull "$image_name"; then
+        if ! docker pull --quiet "$image_name"; then
             echo "Failed to pull image '$image_name'. Skipping container '$container_name'." >&2
             continue
         fi
@@ -384,11 +387,17 @@ echo ""
 
 # Remove images not used by any container (old image versions left behind
 # by updates). Containers, volumes and networks are intentionally left
-# untouched.
-if ! docker image prune --all --force; then
+# untouched. Output is captured instead of piped so a filter failure
+# cannot mask the prune exit status.
+if ! prune_output=$(docker image prune --all --force); then
     echo "Failed to prune unused Docker images." >&2
     exit 1
 fi
+
+# Print the prune report without the per-layer 'deleted: sha256:...'
+# noise, keeping the removed image references ('untagged: ...') and the
+# total reclaimed space
+grep -v '^deleted: sha256:' <<< "$prune_output"
 
 echo "Docker cleanup completed."
 echo ""
