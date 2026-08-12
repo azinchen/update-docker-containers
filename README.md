@@ -6,7 +6,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
 
 - Linux with GNU coreutils and findutils (the script uses `realpath` and `find -printf`)
 - `bash`
-- `docker` with the Compose plugin (`docker compose`) or the standalone `docker-compose` binary
+- `docker` with the Compose plugin (`docker compose`) or the standalone `docker-compose` binary (version 1.25.0 or later, for `--quiet-pull` support)
 - `jq`
 
 ## Installation
@@ -18,18 +18,17 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    sudo chmod +x /usr/local/bin/update-docker-containers
    ```
 
-2. **Create the log directory:**
+2. **Create the log file:**
 
    ```sh
-   sudo mkdir -p /var/log/docker-update
-   sudo touch /var/log/docker-update/docker-update.log
-   sudo chown root:root /var/log/docker-update/docker-update.log
-   sudo chmod 0640 /var/log/docker-update/docker-update.log
+   sudo touch /var/log/docker-update.log
+   sudo chown root:root /var/log/docker-update.log
+   sudo chmod 0640 /var/log/docker-update.log
    ```
 
 3. **Create a cron task to run the script periodically:**
 
-   The script needs root privileges (for Docker access and for writing to the log files created above), so add it to root's crontab:
+   The script needs root privileges (for Docker access and for writing to the log file created above), so add it to root's crontab:
 
    ```sh
    sudo crontab -e
@@ -38,7 +37,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    Add the following line to run the script daily at midnight (adjust the schedule as needed):
 
    ```sh
-   0 0 * * * /usr/local/bin/update-docker-containers /path/to/base_directory >> /var/log/docker-update/docker-update.log 2>&1
+   0 0 * * * /usr/local/bin/update-docker-containers /path/to/base_directory >> /var/log/docker-update.log 2>&1
    ```
 
    Both streams go to a single log file: `docker` and `docker compose` write routine progress output (image pulls, container status) to stderr, so splitting the streams would fill a separate "error" log with normal output on every run.
@@ -56,7 +55,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    Add the following content to the file:
 
    ```plaintext
-   /var/log/docker-update/*.log {
+   /var/log/docker-update.log {
        daily
        missingok
        rotate 14
@@ -67,7 +66,7 @@ This script updates Docker Compose and standalone Docker containers. It pulls th
    }
    ```
 
-   This configuration rotates the logs daily, keeps 14 days of logs, compresses old logs, and ensures the logs are created with the correct permissions. No `postrotate` script is needed: the logs are written by cron's output redirection, which reopens the log files on every run.
+   This configuration rotates the log daily, keeps 14 days of logs, compresses old logs, and ensures the log is created with the correct permissions. No `postrotate` script is needed: the log is written by cron's output redirection, which reopens the file on every run.
 
 ## Usage
 
@@ -119,9 +118,11 @@ This structure allows the script to automatically locate and process each Docker
 
 All output (informational messages and errors) goes to a single file:
 
-- `/var/log/docker-update/docker-update.log`
+- `/var/log/docker-update.log`
 
-The log directory and file are set up in step 2 of the Installation section.
+To keep the log compact, image pull progress output is suppressed and the cleanup report omits per-layer digests; errors are never suppressed.
+
+The log file is set up in step 2 of the Installation section.
 
 ## License
 
