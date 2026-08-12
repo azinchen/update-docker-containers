@@ -340,24 +340,46 @@ else
                 "$image_name"
                 "${cmd_args[@]}")
 
-            # Stop and remove the old container
+            # Stop the old container and rename it out of the way so the
+            # replacement can take the original name. It is only removed
+            # after the new container starts, so a failed recreate can be
+            # rolled back instead of losing the container.
+            backup_name="${container_name}-old"
+
             if ! docker stop "$container_id"; then
                 echo "Failed to stop container '$container_name'. Skipping." >&2
                 continue
             fi
 
-            if ! docker rm "$container_id"; then
-                echo "Failed to remove container '$container_name'. Skipping." >&2
+            if ! docker rename "$container_id" "$backup_name"; then
+                echo "Failed to rename container '$container_name' to '$backup_name' (a leftover container may already use that name). Restarting the existing container." >&2
+                if ! docker start "$container_id"; then
+                    echo "Failed to restart container '$container_name'." >&2
+                fi
                 continue
             fi
 
             # Print the command for debugging
             echo "Running command: ${docker_run_cmd[*]}"
 
-            # Run the container
+            # Run the replacement; on failure restore the old container
             if ! "${docker_run_cmd[@]}"; then
-                echo "Failed to recreate container '$container_name'." >&2
+                echo "Failed to recreate container '$container_name'. Restoring the previous container." >&2
+
+                # Remove a partially created replacement, if any, so the
+                # original name is free again
+                docker rm --force "$container_name" &> /dev/null || true
+
+                if ! docker rename "$container_id" "$container_name" \
+                    || ! docker start "$container_id"; then
+                    echo "Failed to restore container '$container_name'; it is stopped and named '$backup_name'." >&2
+                fi
                 continue
+            fi
+
+            # The replacement is running; remove the old container
+            if ! docker rm "$container_id"; then
+                echo "Failed to remove the old container '$backup_name'. Remove it manually." >&2
             fi
 
             echo "Container '$container_name' has been updated and restarted."
